@@ -99,35 +99,37 @@ class StockLocation(models.Model):
         "the location, either now or in pending operations"
     )
 
-    @api.depends('child_ids.children_in_move_line_ids')
+    @api.depends('in_move_line_ids', 'child_ids.children_in_move_line_ids')
     def _compute_children_in_move_line_ids(self):
         for rec in self:
             rec.children_in_move_line_ids = (
                 rec.mapped('child_ids.children_in_move_line_ids') | rec.in_move_line_ids
             )
 
-    @api.depends('quant_ids', 'in_move_ids', 'children_in_move_line_ids')
+    @api.depends('quant_ids', 'in_move_ids', 'in_move_line_ids', 'children_in_move_line_ids')
     def _compute_location_will_contain_product_ids(self):
         for rec in self:
             rec.location_will_contain_product_ids = (
                 rec.mapped('quant_ids.product_id')
                 | rec.mapped("in_move_ids.product_id")
+                | rec.mapped("in_move_line_ids.product_id")
                 | rec.mapped("children_in_move_line_ids.product_id")
             )
 
-    @api.depends('quant_ids', 'children_in_move_line_ids')
+    @api.depends('quant_ids', 'in_move_line_ids', 'children_in_move_line_ids')
     def _compute_location_will_contain_lot_ids(self):
         for rec in self:
             rec.location_will_contain_lot_ids = (
                 rec.mapped('quant_ids.lot_id')
+                | rec.mapped("in_move_line_ids.lot_id")
                 | rec.mapped("children_in_move_line_ids.lot_id")
             )
 
-    @api.depends('quant_ids', 'in_move_ids', 'in_move_line_ids')
+    @api.depends('quant_ids.quantity', 'in_move_ids', 'in_move_line_ids', 'children_in_move_line_ids')
     def _compute_location_is_empty(self):
         for rec in self:
             if (
-                    rec.quant_ids
+                    sum(rec.quant_ids.mapped("quantity"))
                     or rec.in_move_ids
                     or rec.children_in_move_line_ids
             ):
@@ -317,8 +319,10 @@ class StockLocation(models.Model):
             location_domain = loc_storage_type._domain_location_storage_type(
                 compatible_locations, quants, products
             )
+            _logger.debug('pertinent location domain: %s', location_domain)
             locations = self.search(location_domain, limit=limit)
             valid_location_ids |= set(locations.ids)
+
         valid_locations = self.env['stock.location'].search(
             [('id', 'in', list(valid_location_ids))], limit=limit
         )
