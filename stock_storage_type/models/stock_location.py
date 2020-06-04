@@ -63,12 +63,17 @@ class StockLocation(models.Model):
 
     in_move_ids = fields.One2many(
         'stock.move', 'location_dest_id',
-        domain=[('state', 'not in', ('draft', 'done', 'cancel'))],
+        domain=[
+            ('state', 'in', ('waiting', 'confirmed', 'partially_available', 'assigned'))
+        ],
         help="technical field: the pending incoming stock.moves in the location",
     )
+
     in_move_line_ids = fields.One2many(
         'stock.move.line', 'location_dest_id',
-        domain=[('state', 'not in', ('draft', 'done', 'cancel'))],
+        domain=[
+            ('state', 'in', ('waiting', 'confirmed', 'partially_available', 'assigned'))
+        ],
         help="technical field: the pending incoming "
         "stock.move.lines in the location",
     )
