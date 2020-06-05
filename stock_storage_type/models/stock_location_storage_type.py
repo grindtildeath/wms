@@ -50,11 +50,13 @@ class StockLocationStorageType(models.Model):
     )
     max_height = fields.Float(
         string="Max height (mm)",
+        default=0.0,
         help="If defined, moves to the destination location will only be "
         "allowed if the packaging height is lower than this maximum.",
     )
     max_weight = fields.Float(
         string="Max weight (kg)",
+        default=0.0,
         help="If defined, moves to the destination location will only be "
         "allowed if the packaging wight is lower than this maximum.",
     )

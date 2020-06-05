@@ -129,9 +129,10 @@ class StockLocation(models.Model):
     def _compute_location_is_empty(self):
         for rec in self:
             if (
-                    sum(rec.quant_ids.mapped("quantity"))
-                    or rec.in_move_ids
-                    or rec.children_in_move_line_ids
+                sum(rec.quant_ids.mapped("quantity"))
+                or rec.in_move_ids
+                or rec.in_move_line_ids
+                or rec.children_in_move_line_ids
             ):
                 rec.location_is_empty = False
             else:
