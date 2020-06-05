@@ -58,74 +58,83 @@ class StockLocation(models.Model):
         compute="_compute_location_is_empty",
         store=True,
         help="technical field: True if the location is empty "
-        "and there is no pending incoming products in the location"
+        "and there is no pending incoming products in the location",
     )
 
     in_move_ids = fields.One2many(
-        'stock.move', 'location_dest_id',
+        "stock.move",
+        "location_dest_id",
         domain=[
-            ('state', 'in', ('waiting', 'confirmed', 'partially_available', 'assigned'))
+            ("state", "in", ("waiting", "confirmed", "partially_available", "assigned"))
         ],
         help="technical field: the pending incoming stock.moves in the location",
     )
 
     in_move_line_ids = fields.One2many(
-        'stock.move.line', 'location_dest_id',
+        "stock.move.line",
+        "location_dest_id",
         domain=[
-            ('state', 'in', ('waiting', 'confirmed', 'partially_available', 'assigned'))
+            ("state", "in", ("waiting", "confirmed", "partially_available", "assigned"))
         ],
         help="technical field: the pending incoming "
         "stock.move.lines in the location",
     )
     children_in_move_line_ids = fields.Many2many(
-        'stock.move.line',
-        _compute='_compute_children_in_move_line_ids',
+        "stock.move.line",
+        _compute="_compute_children_in_move_line_ids",
         store=True,
         help="technical field: the pending incoming stock.move.lines "
         "in the location or children locations",
     )
     location_will_contain_lot_ids = fields.Many2many(
-        'stock.production.lot',
+        "stock.production.lot",
         store=True,
         compute="_compute_location_will_contain_lot_ids",
         help="technical field: list of stock.production.lots in "
-        "the location, either now or in pending operations"
+        "the location, either now or in pending operations",
     )
     location_will_contain_product_ids = fields.Many2many(
-        'product.product',
+        "product.product",
         store=True,
         compute="_compute_location_will_contain_product_ids",
         help="technical field: list of products in "
-        "the location, either now or in pending operations"
+        "the location, either now or in pending operations",
     )
 
-    @api.depends('in_move_line_ids', 'child_ids.children_in_move_line_ids')
+    @api.depends("in_move_line_ids", "child_ids.children_in_move_line_ids")
     def _compute_children_in_move_line_ids(self):
         for rec in self:
             rec.children_in_move_line_ids = (
-                rec.mapped('child_ids.children_in_move_line_ids') | rec.in_move_line_ids
+                rec.mapped("child_ids.children_in_move_line_ids") | rec.in_move_line_ids
             )
 
-    @api.depends('quant_ids', 'in_move_ids', 'in_move_line_ids', 'children_in_move_line_ids')
+    @api.depends(
+        "quant_ids", "in_move_ids", "in_move_line_ids", "children_in_move_line_ids"
+    )
     def _compute_location_will_contain_product_ids(self):
         for rec in self:
             rec.location_will_contain_product_ids = (
-                rec.mapped('quant_ids.product_id')
+                rec.mapped("quant_ids.product_id")
                 | rec.mapped("in_move_ids.product_id")
                 | rec.mapped("in_move_line_ids.product_id")
                 | rec.mapped("children_in_move_line_ids.product_id")
             )
 
-    @api.depends('quant_ids', 'in_move_line_ids', 'children_in_move_line_ids')
+    @api.depends("quant_ids", "in_move_line_ids", "children_in_move_line_ids")
     def _compute_location_will_contain_lot_ids(self):
         for rec in self:
             rec.location_will_contain_lot_ids = (
-                rec.mapped('quant_ids.lot_id')
+                rec.mapped("quant_ids.lot_id")
                 | rec.mapped("in_move_line_ids.lot_id")
                 | rec.mapped("children_in_move_line_ids.lot_id")
             )
 
-    @api.depends('quant_ids.quantity', 'in_move_ids', 'in_move_line_ids', 'children_in_move_line_ids')
+    @api.depends(
+        "quant_ids.quantity",
+        "in_move_ids",
+        "in_move_line_ids",
+        "children_in_move_line_ids",
+    )
     def _compute_location_is_empty(self):
         for rec in self:
             if (
@@ -191,7 +200,7 @@ class StockLocation(models.Model):
         if not package_storage_type:
             return putaway_location
         dest_location = putaway_location or self
-        _logger.debug('putaway location: %s', dest_location.name)
+        _logger.debug("putaway location: %s", dest_location.name)
         package_locations = self.env["stock.storage.location.sequence"].search(
             [
                 ("package_storage_type_id", "=", package_storage_type.id),
@@ -201,7 +210,7 @@ class StockLocation(models.Model):
         if not package_locations:
             return dest_location
 
-        for pref_loc in package_locations.mapped('location_id'):
+        for pref_loc in package_locations.mapped("location_id"):
             if (
                 pref_loc.pack_putaway_strategy == "none"
                 and pref_loc.select_allowed_locations(
@@ -242,10 +251,14 @@ class StockLocation(models.Model):
         return locations
 
     def select_first_allowed_location(self, package_storage_type, quants, products):
-        allowed = self.select_allowed_locations(package_storage_type, quants, products, limit=1)
+        allowed = self.select_allowed_locations(
+            package_storage_type, quants, products, limit=1
+        )
         return allowed
 
-    def _domain_location_storage_type_constraints(self, package_storage_type, quants, products):
+    def _domain_location_storage_type_constraints(
+        self, package_storage_type, quants, products
+    ):
         """Compute the domain for the location storage type which match the package
         storage type
 
@@ -254,29 +267,34 @@ class StockLocation(models.Model):
         # There can be multiple location storage types for a given
         # location, so we need to filter on the ones relative to the package
         # we consider.
-        compatible_location_storage_types = self.mapped("allowed_location_storage_type_ids")
+        compatible_location_storage_types = self.mapped(
+            "allowed_location_storage_type_ids"
+        )
 
         pertinent_loc_storagetype_domain = [
-            ('id', 'in', compatible_location_storage_types.ids),
-            ('package_storage_type_ids', '=', package_storage_type.id),
+            ("id", "in", compatible_location_storage_types.ids),
+            ("package_storage_type_ids", "=", package_storage_type.id),
         ]
         if quants.package_id.height:
             pertinent_loc_storagetype_domain += [
-                '|',
-                ('max_height', '=', 0),
-                ('max_height', '>=', quants.package_id.height),
+                "|",
+                ("max_height", "=", 0),
+                ("max_height", ">=", quants.package_id.height),
             ]
         if quants.package_id.pack_weight:
             pertinent_loc_storagetype_domain += [
-                '|',
-                ('max_weight', '=', 0),
-                ('max_weight', '>=', quants.package_id.pack_weight),
+                "|",
+                ("max_weight", "=", 0),
+                ("max_weight", ">=", quants.package_id.pack_weight),
             ]
-        _logger.debug('pertinent storage type domain: %s',
-                      pertinent_loc_storagetype_domain)
+        _logger.debug(
+            "pertinent storage type domain: %s", pertinent_loc_storagetype_domain
+        )
         return pertinent_loc_storagetype_domain
 
-    def select_allowed_locations(self, package_storage_type, quants, products, limit=None):
+    def select_allowed_locations(
+        self, package_storage_type, quants, products, limit=None
+    ):
         # TODO merge with select_first_allowed_location ?
         # We have package who may be placed in a stock.location
         #
@@ -287,31 +305,29 @@ class StockLocation(models.Model):
         # 2. On a location_ST there are some additional restrictions: a -
         # capacity (volume / height / weight) and b - properties (boolean
         # flags: only empty, don't mix lots, don't mix products)
-        LocStorageType = self.env['stock.location.storage.type']
+        LocStorageType = self.env["stock.location.storage.type"]
         _logger.debug(
-            'select allowed location for package storage type %s (q=%s, p=%s)',
-            package_storage_type.name, quants, products.mapped('name')
+            "select allowed location for package storage type %s (q=%s, p=%s)",
+            package_storage_type.name,
+            quants,
+            products.mapped("name"),
         )
         # 1: filter locations on compatible storage type
         compatible_locations = self.search(
             [
-                ('id', 'in', self.ids),
+                ("id", "in", self.ids),
                 (
-                    'allowed_location_storage_type_ids',
-                    'in',
-                    package_storage_type.location_storage_type_ids.ids
+                    "allowed_location_storage_type_ids",
+                    "in",
+                    package_storage_type.location_storage_type_ids.ids,
                 ),
             ]
         )
-        pertinent_loc_s_t_domain = (
-            compatible_locations._domain_location_storage_type_constraints(
-                package_storage_type, quants, products
-            )
+        pertinent_loc_s_t_domain = compatible_locations._domain_location_storage_type_constraints(  # noqa
+            package_storage_type, quants, products
         )
 
-        pertinent_loc_storage_types = LocStorageType.search(
-            pertinent_loc_s_t_domain
-        )
+        pertinent_loc_storage_types = LocStorageType.search(pertinent_loc_s_t_domain)
 
         # now loop over the pertinent location storage types (there should be
         # few of them) and check for properties to find suitable locations
@@ -320,16 +336,21 @@ class StockLocation(models.Model):
             location_domain = loc_storage_type._domain_location_storage_type(
                 compatible_locations, quants, products
             )
-            _logger.debug('pertinent location domain: %s', location_domain)
+            _logger.debug("pertinent location domain: %s", location_domain)
             locations = self.search(location_domain, limit=limit)
             valid_location_ids |= set(locations.ids)
 
-        valid_locations = self.env['stock.location'].search(
-            [('id', 'in', list(valid_location_ids))], limit=limit
+        valid_locations = self.env["stock.location"].search(
+            [("id", "in", list(valid_location_ids))], limit=limit
         )
+
         _logger.debug(
-            'select allowed location for package storage type %s (q=%s, p=%s) found %d locations',
-            package_storage_type.name, quants, products.mapped('name'), len(valid_locations)
+            "select allowed location for package storage"
+            " type %s (q=%s, p=%s) found %d locations",
+            package_storage_type.name,
+            quants,
+            products.mapped("name"),
+            len(valid_locations),
         )
         return valid_locations
 

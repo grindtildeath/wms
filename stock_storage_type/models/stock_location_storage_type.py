@@ -121,35 +121,33 @@ class StockLocationStorageType(models.Model):
         """
         self.ensure_one()
         location_domain = [
-            ('id', 'in', candidate_locations.ids),
-            ('allowed_location_storage_type_ids', '=', self.id),
+            ("id", "in", candidate_locations.ids),
+            ("allowed_location_storage_type_ids", "=", self.id),
         ]
         # TODO this method and domain is applied once per storage type. If it's
         # too slow at some point, we could group the storage types by similar
         # configuration (only_empty, do_not_mix_products, do_not_mix_lots) and
         # do a single query per set of options
         if self.only_empty:
-            location_domain.append(
-                ('location_is_empty', '=', True)
-            )
+            location_domain.append(("location_is_empty", "=", True))
         if self.do_not_mix_products:
             location_domain += [
-                '|',
+                "|",
                 # Ideally, we would like a domain which is a strict comparison:
                 # if we do not mix products, we should be able to filter on ==
                 # product.id. Here, if we can create a move for product B and
                 # set it's destination in a location already used by product A,
                 # then all the new moves for product B will be allowed in the
                 # location.
-                ('location_will_contain_product_ids', 'in', products.ids),
-                ('location_will_contain_product_ids', '=', False)
+                ("location_will_contain_product_ids", "in", products.ids),
+                ("location_will_contain_product_ids", "=", False),
             ]
             if self.do_not_mix_lots:
-                lots = quants.mapped('lot_id')
+                lots = quants.mapped("lot_id")
                 location_domain += [
-                    '|',
+                    "|",
                     # same comment as for the products
-                    ('location_will_contain_lot_ids', 'in', lots.ids),
-                    ('location_will_contain_lot_ids', '=', False),
+                    ("location_will_contain_lot_ids", "in", lots.ids),
+                    ("location_will_contain_lot_ids", "=", False),
                 ]
         return location_domain

@@ -323,7 +323,12 @@ class TestStorageTypeMove(TestStorageTypeCommon):
             )
 
         def _levels_for(packages):
-            return self.env["stock.package_level"].search([("package_id", "in", packages.ids), ("picking_id", "=", int_picking.id)])
+            return self.env["stock.package_level"].search(
+                [
+                    ("package_id", "in", packages.ids),
+                    ("picking_id", "=", int_picking.id),
+                ]
+            )
 
         first_level = _levels_for(first_package)
         self.assertEqual(len(first_level), 1)
@@ -346,9 +351,13 @@ class TestStorageTypeMove(TestStorageTypeCommon):
         # cardbox location
         # Cardbox with same product same lot go into same location
         self.assertEqual(len(fourth_fifth_levels), 2)
-        self.assertEqual(fourth_fifth_levels.location_dest_id, self.cardboxes_bin_3_location)
+        self.assertEqual(
+            fourth_fifth_levels.location_dest_id, self.cardboxes_bin_3_location
+        )
 
-        for pack_level in first_level | second_level | third_level | fourth_fifth_levels:
+        for pack_level in (
+            first_level | second_level | third_level | fourth_fifth_levels
+        ):
             # Check domain
             self.assertEqual(
                 pack_level.allowed_location_dest_ids,
