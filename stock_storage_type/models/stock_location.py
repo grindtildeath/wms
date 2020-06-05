@@ -79,13 +79,6 @@ class StockLocation(models.Model):
         help="technical field: the pending incoming "
         "stock.move.lines in the location",
     )
-    children_in_move_line_ids = fields.Many2many(
-        "stock.move.line",
-        _compute="_compute_children_in_move_line_ids",
-        store=True,
-        help="technical field: the pending incoming stock.move.lines "
-        "in the location or children locations",
-    )
     location_will_contain_lot_ids = fields.Many2many(
         "stock.production.lot",
         store=True,
@@ -101,39 +94,24 @@ class StockLocation(models.Model):
         "the location, either now or in pending operations",
     )
 
-    @api.depends("in_move_line_ids", "child_ids.children_in_move_line_ids")
-    def _compute_children_in_move_line_ids(self):
-        for rec in self:
-            rec.children_in_move_line_ids = (
-                rec.mapped("child_ids.children_in_move_line_ids") | rec.in_move_line_ids
-            )
-
-    @api.depends(
-        "quant_ids", "in_move_ids", "in_move_line_ids", "children_in_move_line_ids"
-    )
+    @api.depends("quant_ids", "in_move_ids", "in_move_line_ids")
     def _compute_location_will_contain_product_ids(self):
         for rec in self:
             rec.location_will_contain_product_ids = (
                 rec.mapped("quant_ids.product_id")
                 | rec.mapped("in_move_ids.product_id")
                 | rec.mapped("in_move_line_ids.product_id")
-                | rec.mapped("children_in_move_line_ids.product_id")
             )
 
-    @api.depends("quant_ids", "in_move_line_ids", "children_in_move_line_ids")
+    @api.depends("quant_ids", "in_move_line_ids")
     def _compute_location_will_contain_lot_ids(self):
         for rec in self:
-            rec.location_will_contain_lot_ids = (
-                rec.mapped("quant_ids.lot_id")
-                | rec.mapped("in_move_line_ids.lot_id")
-                | rec.mapped("children_in_move_line_ids.lot_id")
-            )
+            rec.location_will_contain_lot_ids = rec.mapped(
+                "quant_ids.lot_id"
+            ) | rec.mapped("in_move_line_ids.lot_id")
 
     @api.depends(
-        "quant_ids.quantity",
-        "in_move_ids",
-        "in_move_line_ids",
-        "children_in_move_line_ids",
+        "quant_ids.quantity", "in_move_ids", "in_move_line_ids",
     )
     def _compute_location_is_empty(self):
         for rec in self:
@@ -141,7 +119,6 @@ class StockLocation(models.Model):
                 sum(rec.quant_ids.mapped("quantity"))
                 or rec.in_move_ids
                 or rec.in_move_line_ids
-                or rec.children_in_move_line_ids
             ):
                 rec.location_is_empty = False
             else:
