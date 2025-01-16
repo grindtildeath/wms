@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="shopfloor_menu_form_view" model="ir.ui.view">
+        <field name="model">shopfloor.menu</field>
+        <field name="inherit_id" ref="shopfloor.shopfloor_menu_form_view" />
+        <field name="arch" type="xml">
+            <group name="destination_package_selection" position="inside">
+                <field name="force_kit_pacakge_ids" attrs="{'invisible': [('destination_package_selection', '!=', 'predefined')]}">
+                    <tree editable="bottom">
+                        <field name="sequence" widget="handle" />
+                        <field name="package_id" />
+                    </tree>
+                </field>
+            </group>
+        </field>
+    </record>
+</odoo>
