@@ -272,6 +272,18 @@ class ShopfloorMenu(models.Model):
         help="Python code to sort move lines.",
     )
 
+    destination_package_selection_is_possible = fields.Boolean(
+        compute="_compute_destination_package_selection_is_possible"
+    )
+    destination_package_selection = fields.Selection(
+        [
+            ("transfer", "By transfer"),
+            ("predefined", "By predefined package"),
+        ],
+        default="transfer",
+        required=True,
+    )
+
     @api.onchange("unload_package_at_destination")
     def _onchange_unload_package_at_destination(self):
         # Uncheck pick_pack_same_time when unload_package_at_destination is set to True
@@ -517,3 +529,10 @@ class ShopfloorMenu(models.Model):
             )
             if msg:
                 raise exceptions.ValidationError(msg)
+
+    @api.depends("scenario_id")
+    def _compute_destination_package_selection_is_possible(self):
+        for menu in self:
+            menu.destination_package_selection_is_possible = (
+                menu.scenario_id.has_option("allow_destination_package_selection")
+            )

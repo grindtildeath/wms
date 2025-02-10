@@ -6,6 +6,7 @@ from odoo import fields, models
 class ShopfloorMenu(models.Model):
     _inherit = "shopfloor.menu"
 
+    # FIXME: Remove typo
     force_kit_pacakge_ids = fields.One2many("shopfloor.menu.force.package", "menu_id", string="Force kit into package on batch creation")
 
 

@@ -119,7 +119,8 @@ class ClusterPicking(Component):
         else:
             data = self._data_move_line(move_line, qty_done=qty_done)
         last_picked_line = self._last_picked_line(move_line.picking_id)
-        if last_picked_line:
+        destination_package_selection = self.work.menu.destination_package_selection
+        if destination_package_selection == "transfer" and last_picked_line:
             # suggest pack to be used for the next line
             data["package_dest"] = self.data.package(
                 last_picked_line.result_package_id.with_context(
@@ -128,6 +129,14 @@ class ClusterPicking(Component):
                 picking=move_line.picking_id,
             )
             data["disable_full_bin_action"] = self.work.menu.disable_full_bin_action
+        if destination_package_selection == "predefined":
+            data["package_dest"] = self.data.package(
+                move_line.result_package_id.with_context(
+                    picking_id=move_line.picking_id.id
+                ),
+                picking=move_line.picking_id,
+            )
+            data["disable_full_bin_action"] = True
         return self._response(next_state="scan_destination", data=data, message=message)
 
     def _response_for_change_pack_lot(self, move_line, message=None):
@@ -333,10 +342,19 @@ class ClusterPicking(Component):
           package
         * start: if the condition above is wrong (rare case of race condition...)
         """
+        breakpoint()
         batch = self.env["stock.picking.batch"].browse(picking_batch_id)
         if not batch.exists():
             return self._response_batch_does_not_exist()
+        self._pre_pick_batch_hook(batch)
         return self._pick_next_line(batch)
+
+    def _pre_pick_batch_hook(self, batch):
+        if self.work.menu.destination_package_selection == "predefined":
+            if not all(ml.result_package_id for ml in batch.picking_ids.move_line_ids):
+                self._response_for_start(
+                    message=_("Not all move lines have predefined package.")
+                )
 
     def _pick_next_line(self, batch, message=None, force_line=None):
         if force_line:
@@ -379,7 +397,7 @@ class ClusterPicking(Component):
             # that were already put into a bin, i.e. the destination package
             # is different.
             and (
-                not line.result_package_id or line.result_package_id == line.package_id
+                not line.result_package_id or line.result_package_id == line.package_id or not line.qty_done
             )
         )
 
@@ -822,6 +840,18 @@ class ClusterPicking(Component):
         if not move_line.exists():
             return self._pick_next_line(
                 batch, message=self.msg_store.operation_not_found()
+            )
+        # TODO: Check if we should not reuse allow_alternative_destination_package
+        if self.work.menu.destination_package_selection == "predefined" and barcode != move_line.result_package_id.name:
+            return self._response_for_scan_destination(
+                move_line,
+                message={
+                    "message_type": "error",
+                    "body": _(
+                        "You must use the predefined package: {}"
+                    ).format(move_line.result_package_id.name),
+                },
+                qty_done=quantity,
             )
 
         response = self._set_destination_pack_update_quantity(

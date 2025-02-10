@@ -179,6 +179,16 @@
                     />
                     <field name="move_line_processing_sort_order" />
                 </group>
+                <group
+                    name="destination_package_selection"
+                    attrs="{'invisible': [('destination_package_selection_is_possible', '=', False)]}"
+                >
+                    <field
+                        name="destination_package_selection_is_possible"
+                        invisible="1"
+                    />
+                    <field name="destination_package_selection" />
+                </group>
             </group>
             <group name="options" position="after">
                 <group name="move_line_processing_sort_order_custom_code">
